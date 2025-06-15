@@ -1,77 +1,47 @@
-# 🧩 NeoMutt Build & Install Guide (Ubuntu 24.04 - WSL2)
 
-## ✅ System
+# Building and Installing NeoMutt (May 2025 Release) on Ubuntu 24.04 (WSL2)
 
-- **OS**: Ubuntu 24.04 (running inside WSL2)
-- **Kernel**: Linux 6.6.87.1-microsoft-standard-WSL2
-- **Target**: Full-featured NeoMutt for Gmail (IMAP/SMTP + OAuth2), GPG, Header Cache with Compression, and Privacy
+This guide walks through building the latest NeoMutt from source using the `autosetup` system, configuring it for Gmail with GPG and OAuth support, and resolving platform-specific issues like AppArmor on WSL2.
 
 ---
 
-## 🔧 Step 1: Install Required Dependencies
+## 📦 Prerequisites
 
-```bash
-sudo apt update && sudo apt install -y \
-  build-essential \
-  git \
-  pkg-config \
-  libncursesw5-dev \
-  libssl-dev \
-  libgnutls28-dev \
-  libgpgme-dev \
-  libnotmuch-dev \
-  libsqlite3-dev \
-  libtokyocabinet-dev \
-  libsasl2-dev \
-  liblz4-dev \
-  libzstd-dev \
-  zlib1g-dev \
-  libidn2-dev \
-  libtinfo-dev \
-  docbook-xml \
-  docbook-xsl \
-  xsltproc \
-  xml-core \
-  ca-certificates \
-  curl
-```
+### System
+- OS: Ubuntu 24.04 running on WSL2
+- Shell: Bash (with `sudo` privileges)
 
 ---
 
-## 📦 Step 2: Clone the NeoMutt GitHub Repository
+## 1. Clone the NeoMutt Repository
 
 ```bash
 git clone https://github.com/neomutt/neomutt.git
 cd neomutt
 ```
 
-Check out the latest tagged release (May 2025):
+---
+
+## 2. Install Required Build Dependencies
 
 ```bash
-git checkout 20250510
+sudo apt update
+sudo apt install -y   build-essential   libncursesw5-dev   libgnutls28-dev   libgpgme-dev   libnotmuch-dev   libtokyocabinet-dev   libsqlite3-dev   libidn2-0-dev   libsasl2-dev   liblz4-dev   libzstd-dev   zlib1g-dev   pkg-config   docbook-xml   docbook-xsl   xsltproc   xmlto   libp11-kit-dev   libgpg-error-dev
 ```
 
 ---
 
-## ⚙️ Step 3: Configure Build with Autosetup
+## 3. Configure the Build with `autosetup`
+
+Use the following one-line command to configure NeoMutt with the required features:
 
 ```bash
 ./configure --prefix=/usr/local --ssl --gnutls --gpgme --notmuch --sqlite --tokyocabinet --sasl --autocrypt --zlib --lz4 --zstd --homespool --disable-paths-in-cflags --disable-doc
 ```
 
-This configures NeoMutt with:
-- GPG/PGP support
-- Gmail-compatible TLS + SASL
-- IMAP/SMTP
-- Header caching (TokyoCabinet)
-- Compression (lz4, zstd, zlib)
-- Privacy (no hostname or build path leaks)
-
-If you encounter errors like `liblz4` or `libzstd` not found, double-check that `liblz4-dev` and `libzstd-dev` are installed.
-
 ---
 
-## 🛠️ Step 4: Build and Install
+## 4. Build and Install
 
 ```bash
 make -j$(nproc)
@@ -80,27 +50,19 @@ sudo make install
 
 ---
 
-## 🔍 Step 5: Confirm Build Features
+## 5. Verify Installation
 
 ```bash
 neomutt -v
 ```
 
-You should see output like:
-
-```
-NeoMutt 20250510-1-<commit_hash>
-...
-Compile options:
-  +autocrypt +gnutls +gpgme +notmuch +sqlite +sasl +smime +pgp
-  +hcache +lz4 +zlib +zstd
-...
-storage: tokyocabinet
-```
+Make sure the output shows support for `gpgme`, `sasl`, `gnutls`, and compression backends like `lz4`, `zlib`, `zstd`.
 
 ---
 
-## ✅ Optional: Runtime Utilities (Recommended)
+## 6. Install Supporting Tools
+
+These tools are helpful for full NeoMutt + Gmail usage:
 
 ```bash
 sudo apt install -y gnupg msmtp isync notmuch w3m urlview pass xsel
@@ -108,12 +70,51 @@ sudo apt install -y gnupg msmtp isync notmuch w3m urlview pass xsel
 
 ---
 
-## 📁 Filesystem Paths of Interest
+## 7. 🛡 Handling AppArmor (WSL2-Specific)
 
-| Path                    | Description                                |
-|-------------------------|--------------------------------------------|
-| `/usr/local/bin/neomutt` | Installed NeoMutt binary                  |
-| `/usr/local/etc/`       | Location for `neomuttrc` if system-wide    |
-| `~/.config/neomutt/`    | Preferred config dir (create manually)     |
-| `~/.gnupg/`              | GPG key storage                            |
-| `~/.mail/` or `~/Maildir/` | Mail store if using offline sync tools |
+AppArmor is not fully supported under WSL2 and may block `msmtp`.
+
+### Option 1: Disable AppArmor Prompt During Reconfigure
+
+Run:
+
+```bash
+sudo dpkg-reconfigure msmtp
+```
+
+When asked:
+
+> **Enable AppArmor support for msmtp?**
+
+Select: **No**
+
+### Option 2: Manually Disable Profile
+
+Alternatively, you can disable AppArmor for `msmtp` like this:
+
+```bash
+sudo mv /etc/apparmor.d/usr.bin.msmtp /etc/apparmor.d/usr.bin.msmtp.disabled
+```
+
+Or remove AppArmor entirely if not needed:
+
+```bash
+sudo apt purge apparmor apparmor-utils
+```
+
+---
+
+## ✅ Ready for Configuration
+
+At this point, NeoMutt is fully installed with support for:
+- Gmail via `msmtp` and `isync`
+- OAuth or App Password
+- GPG encryption/signing
+- Full privacy-oriented configuration
+
+Next Steps:
+- Configure `~/.msmtprc` for Gmail SMTP
+- Setup `~/.mbsyncrc` for email fetching
+- Write `~/.neomuttrc` for email reading
+
+---
