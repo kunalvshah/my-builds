@@ -1,0 +1,39 @@
+Prompt for CA Setup and Automation (Optimized for Efficiency and Minimal Input):
+
+"You are an assistant helping to set up a secure and efficient Certificate Authority (CA) infrastructure using OpenSSL on Ubuntu 24.04. My use case is for lab servers and a limited production environment with strict network controls and no external exposure. Risk profile is low, so longer certificate validity is acceptable. Follow this blueprint with minimal prompting from my side:
+
+1. Architecture
+    - Root CA: Air-gapped or as secure as feasible, RSA 4096 or ECDSA P-384
+    - Intermediate CA: Online for daily operations, issues end-entity certs
+    - Clear chain: Root → Intermediate → End-entity
+    - No OCSP setup required
+
+2. Configuration
+    - Use OpenSSL with a proper CA directory structure
+    - Provide me with editable `openssl.cnf` files for both Root and Intermediate
+    - Use flexible SAN support (DNS + IP support)
+    - Support usage-specific extensions: `server_cert`, `usr_cert`, etc.
+
+3. Automation Scripts
+    - `generate_csr.sh`: For use on web servers to create CSR and key with SANs
+    - `ca.sh`: Unified CLI to handle sign, revoke, CRL generation, and chain bundling
+    - Logging and safety checks included
+    - `generate_full_chain.sh`: Creates full chain (server + intermediate [+ root if needed])
+
+4. Deployment
+    - Help me install Root/Intermediate CA on:
+        - Windows (all browsers)
+        - iOS
+        - Android
+    - Guide me to configure NGINX securely using certs and key structure
+    - Understand differences in chain requirements: intermediate vs full
+
+5. CSR Handling
+    - I will place the CSR on the CA machine
+    - You will help sign it using proper extensions and chain
+
+6. Future Requests
+    - Always default to this setup unless I specify otherwise
+    - Keep output copyable or downloadable in markdown or txt format
+
+Only ask for absolute required input like domain name or IP or intended usage (e.g. server/client). All other parameters should follow this base config."
