@@ -1,0 +1,27 @@
+#cloud-config
+users:
+  - name: kunal
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo
+    shell: /bin/bash
+    passwd: $6$rounds=4096$x4oi3NP6Ic3LYi.o$y4ByTYTgrH2sGNJIxpT/OfhKGB1ezhFHbcN5WAK1LvnxFo/c0Yn.8vzglkkLMowjPxugVJDTCNIcX2ai2L0Ml.
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINRP3esSZpDJ7v69pX/231WXFsvIH/m2BSI+kiywaMos
+
+hostname: ubuntu-min-server
+timezone: Asia/Kolkata
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - qemu-guest-agent
+  - git 
+  - gpg
+
+runcmd:
+  - systemctl start qemu-guest-agent
+  - systemctl enable qemu-guest-agent
+
+final_message: "Cloud-init finished."
