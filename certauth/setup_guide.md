@@ -140,3 +140,140 @@ Make sure `/etc/hosts` or internal DNS maps `api.intelimach.lab` to correct IP.
 ---
 
 End of Guide.
+
+### If above does not work then restore CA from the backup and follow the steps
+
+# CA Restore Guide — Intelimach Lab
+
+**Tested on:** Ubuntu 24.04.2 LTS, OpenSSL 3.0.13
+
+## What You Need
+
+1. **Backup file:** `ca-backup-YYYYMMDD.tar.gz`
+2. **Root CA passphrase** (also stored in `README` inside the backup)
+3. **Intermediate CA passphrase** (also stored in `README` inside the backup)
+
+> **Security warning:** The backup contains `README` with both passphrases in plaintext. Always store the backup in an encrypted location (encrypted USB, password-protected vault, etc.).
+
+---
+
+## Step 1 — Create the Backup (on current server)
+
+```bash
+tar czf /root/ca-backup-$(date +%Y%m%d).tar.gz /root/ca /root/issue-cert.sh /root/README
+```
+
+## Step 2 — Transfer to New Server
+
+```bash
+scp /root/ca-backup-*.tar.gz user@newserver:/root/
+```
+
+## Step 3 — Restore (on new server)
+
+```bash
+# Install OpenSSL
+apt update && apt install -y openssl
+
+# Extract the backup
+cd /
+tar xzf /root/ca-backup-*.tar.gz
+```
+
+This restores everything to `/root/ca`, `/root/issue-cert.sh`, and `/root/README`.
+
+Check `README` for the key passphrases, tested OS/OpenSSL versions, and usage notes.
+
+**Important:** Always run `issue-cert.sh` with `bash`, not `sh`:
+```bash
+bash /root/issue-cert.sh app.intelimach.lab
+```
+
+### If restoring to a different path
+
+If you don't want the files at `/root/ca`, extract wherever you like and then update the hardcoded paths in **three files**:
+
+```bash
+NEW_PATH="/your/new/path/ca"
+
+sed -i "s|/root/ca|${NEW_PATH}|g" \
+  ${NEW_PATH}/root/openssl.cnf \
+  ${NEW_PATH}/intermediate/openssl.cnf \
+  /path/to/issue-cert.sh
+```
+
+## Step 4 — Verify
+
+Run all four checks — every one must pass:
+
+```bash
+# 4a. Verify Root key password
+openssl rsa -in /root/ca/root/private/ca.key.pem -check -noout
+# Expected: RSA key ok
+
+# 4b. Verify Intermediate key password
+openssl rsa -in /root/ca/intermediate/private/intermediate.key.pem -check -noout
+# Expected: RSA key ok
+
+# 4c. Verify the chain of trust
+openssl verify -CAfile /root/ca/root/certs/ca.cert.pem \
+  /root/ca/intermediate/certs/intermediate.cert.pem
+# Expected: intermediate.cert.pem: OK
+
+# 4d. Issue a test certificate
+bash /root/issue-cert.sh test.intelimach.lab
+# Expected: "Certificate Issued Successfully!" with verification OK
+```
+
+## Step 5 — Decommission Old Server
+
+Once verified, securely wipe the CA data from the old server:
+
+```bash
+# On the OLD server — only after confirming the new one works
+shred -vfz -n 5 /root/ca/root/private/ca.key.pem
+shred -vfz -n 5 /root/ca/intermediate/private/intermediate.key.pem
+shred -vfz -n 5 /root/README
+rm -rf /root/ca
+```
+
+---
+
+## Quick Reference — File Locations
+
+```
+/root/
+├── README                             # Passphrases, system info, usage notes
+├── issue-cert.sh                          # Certificate issuing script
+└── ca/
+    ├── root/
+    │   ├── openssl.cnf                    # Root CA config
+    │   ├── private/ca.key.pem             # Root private key (GUARD THIS)
+    │   ├── certs/ca.cert.pem              # Root certificate (distribute to clients)
+    │   ├── index.txt                      # Certificate database
+    │   └── serial                         # Next serial number
+    └── intermediate/
+        ├── openssl.cnf                    # Intermediate CA config
+        ├── private/intermediate.key.pem   # Intermediate private key
+        ├── certs/intermediate.cert.pem    # Intermediate certificate
+        ├── certs/ca-chain.cert.pem        # Full chain (Intermediate + Root)
+        ├── index.txt                      # Certificate database
+        └── serial                         # Next serial number
+```
+
+## Issuing Certificates After Restore
+
+```bash
+# Single domain
+bash /root/issue-cert.sh app.intelimach.lab
+
+# Custom validity (2 years)
+bash /root/issue-cert.sh app.intelimach.lab 730
+
+# With extra SANs
+bash /root/issue-cert.sh app.intelimach.lab 365 "DNS:api.intelimach.lab,IP:192.168.1.100"
+
+# Wildcard
+bash /root/issue-cert.sh "*.intelimach.lab" 365
+```
+
